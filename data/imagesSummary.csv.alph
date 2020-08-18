@@ -1,0 +1,32 @@
+{
+  "FileFormatVersion": 1,
+  "Origin": {
+    "Case": "CommandOrigin",
+    "Fields": [
+      {
+        "Inputs": [
+          {
+            "RelativePath": "../code/buildSummaryTable.py",
+            "Hash": "36EEDF110F95FEF9133F64F9FF44AB6956697186375915F60174D7D7AD96E86DC69833627D2C065531474CF1744373F97953CE9D90A81C83973297CC82FA28B8"
+          }
+        ],
+        "Outputs": [
+          {
+            "RelativePath": "imagesSummary.csv",
+            "Hash": "6529143C229AB93006891E8D242887533FAE257C43EEA960CE98D434DC704029539A739F7F3C0D6BCA432D4AA29E3E56F567B48306691F678C1D413603DD20E1"
+          }
+        ],
+        "ResourceGroups": [],
+        "SuccessfulExitCodes": [
+          0
+        ],
+        "OutputIndex": 0,
+        "WorkingDirectory": "..",
+        "Command": "python $in1 /mnt/ML/LostPetInitiative/pet911ru/ $out1",
+        "Signature": "4EFE9873F6E591A0ED1D7AF515456D662CA84D3A",
+        "OutputsCleanDisabled": false
+      }
+    ]
+  },
+  "IsTracked": false
+}
