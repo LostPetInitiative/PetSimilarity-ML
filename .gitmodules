@@ -1,0 +1,3 @@
+[submodule "code/tensorflow-yolov4-tflite"]
+	path = code/tensorflow-yolov4-tflite
+	url = https://github.com/hunglc007/tensorflow-yolov4-tflite.git
