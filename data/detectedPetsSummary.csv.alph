@@ -1,0 +1,38 @@
+{
+  "FileFormatVersion": 1,
+  "Origin": {
+    "Case": "CommandOrigin",
+    "Fields": [
+      {
+        "Inputs": [
+          {
+            "RelativePath": "../code/tensorflow-yolov4-tflite/detectPet911.py",
+            "Hash": "64FA20A563B1F4D527EAC3F1372AB7BC485EDA95507EBBB3066B26A40F8E8DE292DEDD6C5E06ECFC1BF049C5571ECFC33A55AE05F855293C2537D08EC7534853"
+          },
+          {
+            "RelativePath": "imagesSummary.csv",
+            "Hash": "6529143C229AB93006891E8D242887533FAE257C43EEA960CE98D434DC704029539A739F7F3C0D6BCA432D4AA29E3E56F567B48306691F678C1D413603DD20E1"
+          }
+        ],
+        "Outputs": [
+          {
+            "RelativePath": "detectedPetsSummary.csv",
+            "Hash": "F9A8BCA8F2BBCDD388D3518682347C88CB73EEBD1B66B7B6BCB8136E735F3FFCC0B7DE7AE909AB1F69CEBF03DB0B0BDF1B5AFC139AA4510C4FAD918940A95721"
+          }
+        ],
+        "ResourceGroups": [
+          "gpu"
+        ],
+        "SuccessfulExitCodes": [
+          0
+        ],
+        "OutputIndex": 0,
+        "WorkingDirectory": "../code/tensorflow-yolov4-tflite/",
+        "Command": "python $in1 $in2 /mnt/ML/LostPetInitiative/pet911ru/ $out1 /mnt/ML/LostPetInitiative/pet911ru_extracted/ /mnt/ML/LostPetInitiative/pet911ru_extraction_annotations",
+        "Signature": "DA1427E6189A6B3842A2EF9D36FABDB53BAE4E2E",
+        "OutputsCleanDisabled": false
+      }
+    ]
+  },
+  "IsTracked": true
+}

@@ -2,4 +2,5 @@ venv
 // ---alpheus-managed-start---
 **/*.hash
 .alpheus/storage
+data/detectedPetsSummary.csv
 // ---alpheus-managed-end---
