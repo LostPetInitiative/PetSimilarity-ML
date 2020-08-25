@@ -43,6 +43,33 @@ def constructFeatureExtractor(backboneModel, seriesLen, l2regAlpha, DORate, seed
     print(result.summary())
     return result
 
+class TripletCosineSimilarityMetricLayer(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        super(TripletCosineSimilarityMetricLayer, self).__init__(**kwargs)    
+
+    def call(self, anchorFeatures, positiveFeatures, negativeFeatures):
+        posSim = 0.0 - tf.reduce_mean(tf.keras.losses.cosine_similarity(anchorFeatures, positiveFeatures, axis=-1)) # -1.0 is perferct alignment
+        negSim = 0.0 - tf.reduce_mean(tf.keras.losses.cosine_similarity(anchorFeatures, negativeFeatures, axis=-1))
+        
+        self.add_metric(posSim, name='pos_cossim')
+        self.add_metric(negSim, name='neg_cossim')
+        return anchorFeatures, positiveFeatures, negativeFeatures
+
+
+class TripletCosineDistanceLossLayer(tf.keras.layers.Layer):
+    def __init__(self, optimizationMargin = 2.0, **kwargs):
+        super(TripletCosineDistanceLossLayer, self).__init__(**kwargs)
+        self.optimizationMargin = optimizationMargin
+
+    def call(self, anchorFeatures, positiveFeatures, negativeFeatures):
+        posSim = tf.keras.losses.cosine_similarity(anchorFeatures, positiveFeatures, axis=-1) # -1.0 is perferct alignment
+        negSim = tf.keras.losses.cosine_similarity(anchorFeatures, negativeFeatures, axis=-1)
+        #print("posSim shape {0}".format(posSim.shape))
+        loss = tf.reduce_mean(tf.maximum(self.optimizationMargin + posSim - negSim, 0))
+
+        self.add_loss(loss)
+        return (anchorFeatures, positiveFeatures, negativeFeatures)
+
 
 def constructSiameseTripletModel(seriesLen, l2regAlpha, DORate, imageSize = 224, optimizationMargin = 2.0):
     anchorInput = tf.keras.Input(shape=(seriesLen, imageSize, imageSize, 3), name="anchorInput")
@@ -55,14 +82,12 @@ def constructSiameseTripletModel(seriesLen, l2regAlpha, DORate, imageSize = 224,
     positiveFeatures = featureExtractor(poitiveInput)
     negativeFeatures = featureExtractor(negativeInput)
 
+    anchorFeatures, positiveFeatures, negativeFeatures = TripletCosineDistanceLossLayer(name="TripletCosineDistanceLoss")(anchorFeatures, positiveFeatures, negativeFeatures)
+    anchorFeatures, positiveFeatures, negativeFeatures = TripletCosineSimilarityMetricLayer(name="TripletCosineSimilarityMetric")(anchorFeatures, positiveFeatures, negativeFeatures)
+
     result = tf.keras.Model(name="SiameseTripletModel", inputs=[anchorInput, poitiveInput, negativeInput], outputs=[anchorFeatures, positiveFeatures, negativeFeatures])
 
     # adding unsupervised loss
-    posSim = tf.keras.losses.cosine_similarity(anchorFeatures, positiveFeatures, axis=-1) # -1.0 is perferct alignment
-    negSim = tf.keras.losses.cosine_similarity(anchorFeatures, negativeFeatures, axis=-1)
-    print("posSim shape {0}".format(posSim.shape))
-    loss = tf.reduce_mean(tf.maximum(optimizationMargin + posSim - negSim, 0))
-
-    result.add_loss(loss)
+    
     
     return result, backbone, featureExtractor

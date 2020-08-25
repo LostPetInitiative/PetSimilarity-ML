@@ -103,8 +103,8 @@ def loadImagePackTF(pathTensor):
   y = tf.numpy_function(loadImagePackNp, [pathTensor], (tf.uint8))
   return y         
 
-def gen():
-    for sample in ds1.getSamples():
+def trainGen():
+    for sample in ds1.getSamples(cycled=True):
         yield sample
 
 def augment(imagePack):
@@ -116,6 +116,8 @@ def augment(imagePack):
         return image
     return tf.map_fn(augmentSingle, imagePack)
 
+def augmentTriple(anchorPack, positivePack, negativePack):
+        return augment(anchorPack),augment(positivePack),augment(negativePack)
 
 def loadImages(anchorPaths,positivePaths,negativePaths):
     anchorPack = loadImagePackTF(anchorPaths)
@@ -125,22 +127,16 @@ def loadImages(anchorPaths,positivePaths,negativePaths):
 
 zerosDs = tf.data.Dataset.range(1).repeat()
 
-imagePathsDataset = tf.data.Dataset.from_generator(
-     gen,
+trImagePathsDataset = tf.data.Dataset.from_generator(
+     trainGen,
      (tf.string, tf.string, tf.string),
      (tf.TensorShape([None]), tf.TensorShape([None]), tf.TensorShape([None])))
 
-# trainDataset = imagePathsDataset \
-#     .map(loadImages, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=True) \
-#     .map(coerceSeqSizeInTuple, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=True) \
-#     .take(3)
-trainDataset = imagePathsDataset \
+trainDataset = trImagePathsDataset \
     .map(loadImages, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=True) \
     .map(coerceSeqSizeInTuple, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=True) \
-    .shuffle(128,seed=seed+23)
-    # .batch(batchSize) \
-    # .prefetch(prefetchQueueLength)
-
+    .map(augmentTriple, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=True) \
+    .shuffle(128,seed=seed+23)    
 
 dummySupervisedTrainDataset = tf.data.Dataset.zip((trainDataset, zerosDs))
 
@@ -179,7 +175,7 @@ model.fit(x = dummySupervisedBatchedTrainDataset, \
       #callbacks=callbacks,
       shuffle=False, # dataset is shuffled explicilty
       steps_per_epoch= int(math.ceil(trSamplesInOneEpochs / batchSize)),
-      epochs=1)
+      epochs=10)
 
 print("Done")
 
