@@ -7,75 +7,62 @@ def constructCnnBackbone(imageSize = 224):
         include_top=False,
         input_shape=(imageSize, imageSize, 3),
         # it should have exactly 3 inputs channels,
-        # and width and height should be no smaller than 32. E.g. (200, 200, 3) would be one valid value
-        pooling=None)  # Tx8x8x1024 in case of None pooling    
+        pooling=None)  # Tx7x7x1280 in case of None pooling and image side size of 224
     converted = tf.keras.applications.efficientnet.preprocess_input(netInput)
-    print("converted input shape {0}".format(converted.shape))
+    print("converted cnn backbone input shape {0}".format(converted.shape))
+    #print("Backbone")
+    #print(backbone.summary())
+
     result = backbone(converted)
     return tf.keras.Model(name="Backbone", inputs=netInput, outputs=result), backbone
 
-def constructFeatureExtractor(backboneFun):
+def constructFeatureExtractor(backboneModel, seriesLen, l2regAlpha, DORate, seed, imageSize = 224):
     netInput = tf.keras.Input(shape=(seriesLen, imageSize, imageSize, 3), name="featureExtractorInput")
-    backboneApplied = tf.keras.layers.TimeDistributed(backboneFun)(netInput)
+    backboneApplied = tf.keras.layers.TimeDistributed(backboneModel,name="backbone")(netInput) # 7x7x1280 (for image size 224) = 62,720
 
+    backboneOutChannelsCount = 1280
 
-
-def constructModel(seriesLen, imageSize = 224):
-    netInput = tf.keras.Input(shape=(seriesLen, imageSize, imageSize, 3), name="input")
-    
-    cnnOut = tf.keras.layers.TimeDistributed(denseNet, name='cnns')(converted)  # Tx7x7x1024 in case of None pooling
-    print("cnn out shape {0}".format(cnnOut.shape))
-    cnnPooled = tf.keras.layers.TimeDistributed(tf.keras.layers.MaxPooling2D((7, 7)), name='cnnsPooled')(
-        cnnOut)  # Tx1x1x1024
-    cnnPooledReshaped = tf.keras.layers.TimeDistributed(tf.keras.layers.Reshape((1024,)), name='cnnsPooledReshaped')(
-        cnnPooled)  # Tx1024
-    cnnPooledReshapedDO = tf.keras.layers.Dropout(rate=DORate, name='cnnsPooledReshapedDO')(
-        cnnPooledReshaped)  # Tx1024
-    perSliceDenseOut = tf.keras.layers.TimeDistributed(
-        tf.keras.layers.Dense(256,
-        activation="selu",
-        kernel_regularizer=tf.keras.regularizers.L1L2(l2=l2regAlpha)), name='perSliceDenseOut')(
-        cnnPooledReshapedDO)  # 128.   1024*128  parameters
-    perSliceDenseOutDO = tf.keras.layers.Dropout(rate=DORate, name='perSliceDenseOutDO')(
-        perSliceDenseOut)
-    perSliceDenseOut2 = tf.keras.layers.TimeDistributed(
-        tf.keras.layers.Dense(128,
-        activation="selu",
-        kernel_regularizer=tf.keras.regularizers.L1L2(l2=l2regAlpha)), name='perSliceDenseOut2')(
-        perSliceDenseOutDO)  # 128.   1024*128  parameters
-    perSliceDenseOutDO2 = tf.keras.layers.Dropout(rate=DORate, name='perSliceDenseOutDO2')(
-        perSliceDenseOut2)
-    #gru1 = tf.keras.layers.GRU(128, return_sequences=True)
-    #gru1back = tf.keras.layers.GRU(128, return_sequences=True, go_backwards=True)
-    #gru1out = tf.keras.layers.Bidirectional(gru1, backward_layer=gru1back, name='rnn1')(perSliceDenseOutDO)
-    #gru1outDO = tf.keras.layers.Dropout(rate=DORate, name='rnn1DO')(gru1out)
-
-    #, batch_input_shape=(1, seriesLen, 128)
-    # , implementation=1
-
+    # we will do 2D convolution until the image become 1x1
+    cnn1out = tf.keras.layers.TimeDistributed(tf.keras.layers.Conv2D(backboneOutChannelsCount // 2, kernel_size=1,strides=(1,1),padding='valid',activation='selu'),name="postBackboneConv2D")(backboneApplied)
+    cnn1DoOut = tf.keras.layers.AlphaDropout(DORate, noise_shape=(seriesLen,1,1,backboneOutChannelsCount // 2),seed=seed+2334)(cnn1out) # 7 x 7 x 640
+    cnn2out = tf.keras.layers.TimeDistributed(tf.keras.layers.Conv2D(backboneOutChannelsCount // 4, kernel_size=3,strides=(2,2),padding='valid',activation='selu'),name="postBackboneConv2D_2")(cnn1DoOut)
+    cnn2DoOut = tf.keras.layers.AlphaDropout(DORate, noise_shape=(seriesLen,1,1,backboneOutChannelsCount // 4),seed=seed+34632)(cnn2out) # 3 x 3 x 320
+    cnn3out = tf.keras.layers.TimeDistributed(tf.keras.layers.Conv2D(backboneOutChannelsCount // 4, kernel_size=3,strides=(1,1),padding='valid',activation='selu'),name="postBackboneConv2D_3")(cnn2DoOut)
+    cnn3DoOut = tf.keras.layers.AlphaDropout(DORate, noise_shape=(seriesLen,1,1,backboneOutChannelsCount // 4),seed=seed+2346)(cnn3out) # 1 x 1 x 320
+    cnnFinal = tf.keras.layers.Reshape((seriesLen, backboneOutChannelsCount // 4))(cnn3DoOut)
+    fc1out = tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(backboneOutChannelsCount // 8, activation="selu", kernel_regularizer=tf.keras.regularizers.L1L2(l2=l2regAlpha)),name="fc1")(cnnFinal)
+    fc1DoOut =  tf.keras.layers.AlphaDropout(DORate, noise_shape=(seriesLen,backboneOutChannelsCount // 8),seed=seed+245334)(fc1out)
     rnnOut = \
         tf.keras.layers.GRU(
-            96, dropout=DORate,
+            backboneOutChannelsCount // 16, dropout=DORate,
             kernel_regularizer = tf.keras.regularizers.L1L2(l2=l2regAlpha),
-            recurrent_regularizer=tf.keras.regularizers.L1L2(l2=l2regAlpha),
-            return_sequences=True)(perSliceDenseOutDO2)
-    rnnOutDO = tf.keras.layers.Dropout(rate=DORate,name='rnnDO')(rnnOut)
-    rnnOut2 = \
-        tf.keras.layers.GRU(
-            64, dropout=DORate,
-            kernel_regularizer = tf.keras.regularizers.L1L2(l2=l2regAlpha),
-            recurrent_regularizer=tf.keras.regularizers.L1L2(l2=l2regAlpha))(rnnOutDO)
-    rnnOutDO2 = tf.keras.layers.Dropout(rate=DORate,name='rnn2DO')(rnnOut2)
-    # predOut = \
-    #     tf.keras.layers.Dense(6,name="resLogits",activation="linear",
-    #     kernel_regularizer=tf.keras.regularizers.L1L2(l2=l2regAlpha)
-    #     )(rnnOutDO)
-    predOut = \
-        tf.keras.layers.Dense(1,name="unitRes",activation="sigmoid",
-        kernel_regularizer=tf.keras.regularizers.L1L2(l2=l2regAlpha)
-        )(rnnOutDO2)
-    predOutScaled = \
-        tf.keras.layers.Lambda(lambda x: x*5.0, name="scaledRes")(predOut)
+            recurrent_regularizer=tf.keras.regularizers.L1L2(l2=l2regAlpha),            
+            return_sequences=False)(fc1DoOut)
+    result = tf.keras.Model(name="FeatureExtractor", inputs=netInput, outputs=rnnOut)
+    print("Feature extractor")
+    print(result.summary())
+    return result
 
 
-    return tf.keras.Model(name="PANDA_A", inputs=netInput, outputs=predOutScaled), denseNet
+def constructSiameseTripletModel(seriesLen, l2regAlpha, DORate, imageSize = 224, optimizationMargin = 2.0):
+    anchorInput = tf.keras.Input(shape=(seriesLen, imageSize, imageSize, 3), name="anchorInput")
+    poitiveInput = tf.keras.Input(shape=(seriesLen, imageSize, imageSize, 3), name="positiveInput")
+    negativeInput = tf.keras.Input(shape=(seriesLen, imageSize, imageSize, 3), name="negativeInput")
+
+    backbone,backboneCore = constructCnnBackbone(imageSize)
+    featureExtractor = constructFeatureExtractor(backbone, seriesLen, l2regAlpha, DORate, imageSize)
+    anchorFeatures = featureExtractor(anchorInput) # B x features
+    positiveFeatures = featureExtractor(poitiveInput)
+    negativeFeatures = featureExtractor(negativeInput)
+
+    result = tf.keras.Model(name="SiameseTripletModel", inputs=[anchorInput, poitiveInput, negativeInput], outputs=[anchorFeatures, positiveFeatures, negativeFeatures])
+
+    # adding unsupervised loss
+    posSim = tf.keras.losses.cosine_similarity(anchorFeatures, positiveFeatures, axis=-1) # -1.0 is perferct alignment
+    negSim = tf.keras.losses.cosine_similarity(anchorFeatures, negativeFeatures, axis=-1)
+    print("posSim shape {0}".format(posSim.shape))
+    loss = tf.reduce_mean(tf.maximum(optimizationMargin + posSim - negSim, 0))
+
+    result.add_loss(loss)
+    
+    return result, backbone, featureExtractor

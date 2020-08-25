@@ -1,6 +1,7 @@
 {
     "catalogPath" : "data/detectedPetsSummary.csv",
-    "extractedImagesPath" : "/mnt/ML/LostPetInitiative/pet911ru/pet911ru_extracted/",
+    "extractedImagesPath" : "/mnt/ML/LostPetInitiative/pet911ru_extracted/",
     "extractionBinsCount" : 100,
+    "minImagesPerCardForSimilarity": 4,
     "petType" : "cat"
 }

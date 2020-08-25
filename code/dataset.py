@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import random
 import math
 import os
@@ -30,6 +31,9 @@ class SimilaritySet:
                 self.similarityPets.append(petId)
         print("Dataset constructed: {0} pets, {1} of which can be used for similarity analysis".format(len(self.allPets), len(self.similarityPets)))
 
+    def getSimilarityPetsCount(self):
+        return len(self.similarityPets)
+
     def getSamples(self, cycled=False, simImagesSplit='equal'):
         """simImagesSplit: equal or uniformRandom"""
         self.r.setstate(self.r_state)
@@ -53,7 +57,10 @@ class SimilaritySet:
                     if altPetId != similarityPetId:
                         alternativeFound = True
                 altPart = self.petToImages[altPetId]
-                yield (simPart1,simPart2,altPart)
+                yield (
+                    np.array(simPart1),
+                    np.array(simPart2),
+                    np.array(altPart))
             isFirstIter = False
 
 

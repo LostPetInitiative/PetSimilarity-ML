@@ -1,0 +1,36 @@
+{
+  "FileFormatVersion": 1,
+  "Origin": {
+    "Case": "CommandOrigin",
+    "Fields": [
+      {
+        "Inputs": [
+          {
+            "RelativePath": "../code/analyzeImageSummaryTable.R",
+            "Hash": "8E29B87E6919D19CDD51C635D3BDE89A2CAD39D4523D1D5841EBF29C0C62CBCABC8F83B0F3FEFD261EE43386448282E62D58EAEB2BF0CD5B2E87A14330A585B2"
+          },
+          {
+            "RelativePath": "detectedPetsSummary.csv",
+            "Hash": "F9A8BCA8F2BBCDD388D3518682347C88CB73EEBD1B66B7B6BCB8136E735F3FFCC0B7DE7AE909AB1F69CEBF03DB0B0BDF1B5AFC139AA4510C4FAD918940A95721"
+          }
+        ],
+        "Outputs": [
+          {
+            "RelativePath": "detectedPetsSummaryAnalysis/",
+            "Hash": "197589F3BB93CB2E1194B71752AAE6333E12833F6A24EB7319F5AC4691A6CDD58BB6D319585BA1F38B461A755C76BFF533C36B67A7CD5118FC0E74A5B4D239C1"
+          }
+        ],
+        "ResourceGroups": [],
+        "SuccessfulExitCodes": [
+          0
+        ],
+        "OutputIndex": 0,
+        "WorkingDirectory": "..",
+        "Command": "Rscript $in1 $in2 $out1",
+        "Signature": "01E46236138EE161D848F31983173FFE00E500E4",
+        "OutputsCleanDisabled": false
+      }
+    ]
+  },
+  "IsTracked": false
+}
