@@ -10,9 +10,13 @@ import sys
 import cv2
 import json
 import math
+import os
+import random
 import multiprocessing
 
 trainConfigPath = sys.argv[1]
+trainRunConfigPath = sys.argv[2]
+outputPath = sys.argv[3]
 
 with open(trainConfigPath, 'r') as json_file:
     trainConfig = json.load(json_file)
@@ -20,10 +24,24 @@ with open(trainConfigPath, 'r') as json_file:
 print("Train config:")
 print(trainConfig)
 
+with open(trainRunConfigPath, 'r') as json_file:
+    trainRunConfig = json.load(json_file)
+
+print("Train run config:")
+print(trainRunConfig)
+
 catalogPath = trainConfig["catalogPath"]
 petType = trainConfig["petType"]
 extractedImagesPath = trainConfig["extractedImagesPath"]
-minImagesPerCardForSimilarity = trainConfig["minImagesPerCardForSimilarity"]
+validationFoldNum = trainConfig["validationFoldNum"]
+minImagesPerCardForSimilarity = trainRunConfig["minImagesPerCardForSimilarity"]
+monitoredMetric = trainRunConfig["monitoredMetric"]
+monitoredMode = trainRunConfig["monitoredMode"]
+reduceLrPatience = trainRunConfig["reduceLrPatience"]
+minAllowedLR = trainRunConfig["minAllowedLR"]
+earlyStoppingPatience = trainRunConfig["earlyStoppingPatience"]
+minMetricDelta = trainRunConfig["minMetricDelta"]
+
 seed = 344567
 imageSize = 224
 seqLength = 8
@@ -33,6 +51,7 @@ batchSize = 4
 prefetchQueueLength = multiprocessing.cpu_count()
 freezeBackbone = True
 
+random.seed(seed)
 tf.random.set_seed(seed+667734)
 
 catalog = pd.read_csv(catalogPath)
@@ -41,9 +60,21 @@ print("{0} images are available".format(len(catalog)))
 petSpecificCatalog = catalog.loc[catalog.loc[:,'pet'] == petType,:]
 print("{0} images of {1} pet type".format(len(petSpecificCatalog),petType))
 
-ds1 = ds.SimilaritySet(petSpecificCatalog,extractedImagesPath, 123, minImagesPerCardForSimilarity=minImagesPerCardForSimilarity)
 
-trSamplesInOneEpochs = ds1.getSimilarityPetsCount()
+isVal = (petSpecificCatalog.loc[:,'petId'].values % 10 == validationFoldNum*2) | \
+    (petSpecificCatalog.loc[:,'petId'].values % 10 == validationFoldNum*2+1)
+print(isVal)
+trainCatalog = petSpecificCatalog.loc[~ (isVal),:]
+valCatalog = petSpecificCatalog.loc[isVal,:]
+
+print("Train DS")
+trainDs = ds.SimilaritySet(trainCatalog,extractedImagesPath, seed+4221, minImagesPerCardForSimilarity=minImagesPerCardForSimilarity)
+
+print("Val DS")
+valDs = ds.SimilaritySet(valCatalog,extractedImagesPath, seed+4322, minImagesPerCardForSimilarity=minImagesPerCardForSimilarity)
+
+trSamplesInOneEpochs = trainDs.getSimilarityPetsCount()
+vaSamplesInOneEpochs = valDs.getSimilarityPetsCount()
 
 def loadImage(imagePath):
     #print("loadImage: imagePath is {0}".format(imagePath))
@@ -104,7 +135,11 @@ def loadImagePackTF(pathTensor):
   return y         
 
 def trainGen():
-    for sample in ds1.getSamples(cycled=True):
+    for sample in trainDs.getSamples(cycled=True):
+        yield sample
+
+def valGen():
+    for sample in valDs.getSamples(cycled=False):
         yield sample
 
 def augment(imagePack):
@@ -127,22 +162,29 @@ def loadImages(anchorPaths,positivePaths,negativePaths):
 
 zerosDs = tf.data.Dataset.range(1).repeat()
 
-trImagePathsDataset = tf.data.Dataset.from_generator(
-     trainGen,
-     (tf.string, tf.string, tf.string),
-     (tf.TensorShape([None]), tf.TensorShape([None]), tf.TensorShape([None])))
+def createDataset(sampleGen, shuffleBufferSize=0):
+    imagePathsDataset = tf.data.Dataset.from_generator(
+        trainGen,
+        (tf.string, tf.string, tf.string),
+        (tf.TensorShape([None]), tf.TensorShape([None]), tf.TensorShape([None])))
 
-trainDataset = trImagePathsDataset \
-    .map(loadImages, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=True) \
-    .map(coerceSeqSizeInTuple, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=True) \
-    .map(augmentTriple, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=True) \
-    .shuffle(128,seed=seed+23)    
+    processedDataset = imagePathsDataset \
+        .map(loadImages, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=True) \
+        .map(coerceSeqSizeInTuple, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=True) \
+        .map(augmentTriple, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=True)
 
-dummySupervisedTrainDataset = tf.data.Dataset.zip((trainDataset, zerosDs))
+    if shuffleBufferSize>0:
+        processedDataset = processedDataset.shuffle(shuffleBufferSize,seed=seed+23)    
 
-dummySupervisedBatchedTrainDataset = dummySupervisedTrainDataset \
-    .batch(batchSize) \
-    .prefetch(prefetchQueueLength)
+    dummySupervisedDataset = tf.data.Dataset.zip((processedDataset, zerosDs))
+
+    dummySupervisedBatchedDataset = dummySupervisedDataset \
+        .batch(batchSize) \
+        .prefetch(prefetchQueueLength)
+    return dummySupervisedBatchedDataset
+
+trainTfDs = createDataset(trainGen, 128)
+valTfDs = createDataset(valGen, 0)
 
 model, backbone, featureExtractor = efficientSiameseNet.constructSiameseTripletModel(seqLength, l2regAlpha, doRate, imageSize)
 print("model constructed")
@@ -165,17 +207,40 @@ print("model compiled")
 print(model.summary())
 
 print("train dataset")
-print(dummySupervisedBatchedTrainDataset)
+print(trainTfDs)
 
-model.fit(x = dummySupervisedBatchedTrainDataset, \
-      #validation_data = valDs,
-      #validation_steps = int(math.floor(vaSamplesCount / batchSize)),
-      #initial_epoch=initial_epoch,
-      verbose = 1,
-      #callbacks=callbacks,
-      shuffle=False, # dataset is shuffled explicilty
-      steps_per_epoch= int(math.ceil(trSamplesInOneEpochs / batchSize)),
-      epochs=10)
+csv_logger = tf.keras.callbacks.CSVLogger(os.path.join(outputPath,'training_log.csv'), append=False)
+reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor=monitoredMetric, factor=0.1, verbose =1,
+                                patience=reduceLrPatience, min_lr=minAllowedLR, mode=monitoredMode, min_delta=minMetricDelta)
+
+callbacks = [
+    # Interrupt training if `val_loss` stops improving for over 2 epochs
+    tf.keras.callbacks.EarlyStopping(patience=earlyStoppingPatience, monitor=monitoredMetric,mode=monitoredMode, min_delta=minMetricDelta),
+    # Write TensorBoard logs to `./logs` directory
+    #tf.keras.callbacks.TensorBoard(log_dir=outputPath, histogram_freq = 5, profile_batch=0),
+    tf.keras.callbacks.ModelCheckpoint(
+            filepath=os.path.join(outputPath,"weights.hdf5"),
+            save_best_only=True,
+            verbose=True,
+            mode=monitoredMode,
+            save_weights_only=True,
+            #monitor='val_root_recall'
+            monitor=monitoredMetric # as we pretrain later layers, we do not care about overfitting. thus loss instead of val_los
+            ),
+    tf.keras.callbacks.TerminateOnNaN(),
+    csv_logger,
+    reduce_lr
+  ]
+
+
+model.fit(x = trainTfDs, \
+    steps_per_epoch= int(math.ceil(trSamplesInOneEpochs / batchSize)), \
+    validation_data = valTfDs, \
+    validation_steps = int(math.ceil(vaSamplesInOneEpochs / batchSize)), \
+    verbose = 2,
+    callbacks=callbacks,
+    shuffle=False, # dataset is shuffled explicilty
+    epochs=1000)
 
 print("Done")
 

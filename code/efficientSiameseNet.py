@@ -82,7 +82,7 @@ def constructSiameseTripletModel(seriesLen, l2regAlpha, DORate, imageSize = 224,
     positiveFeatures = featureExtractor(poitiveInput)
     negativeFeatures = featureExtractor(negativeInput)
 
-    anchorFeatures, positiveFeatures, negativeFeatures = TripletCosineDistanceLossLayer(name="TripletCosineDistanceLoss")(anchorFeatures, positiveFeatures, negativeFeatures)
+    anchorFeatures, positiveFeatures, negativeFeatures = TripletCosineDistanceLossLayer(optimizationMargin=1.0,name="TripletCosineDistanceLoss")(anchorFeatures, positiveFeatures, negativeFeatures)
     anchorFeatures, positiveFeatures, negativeFeatures = TripletCosineSimilarityMetricLayer(name="TripletCosineSimilarityMetric")(anchorFeatures, positiveFeatures, negativeFeatures)
 
     result = tf.keras.Model(name="SiameseTripletModel", inputs=[anchorInput, poitiveInput, negativeInput], outputs=[anchorFeatures, positiveFeatures, negativeFeatures])

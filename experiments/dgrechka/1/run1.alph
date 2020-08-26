@@ -1,0 +1,42 @@
+{
+  "FileFormatVersion": 1,
+  "Origin": {
+    "Case": "CommandOrigin",
+    "Fields": [
+      {
+        "Inputs": [
+          {
+            "RelativePath": "../../../code/train.py",
+            "Hash": "581F03DA2D825CB2F7BD2AF1978D4FB8168C66A0CACA4C2757D3F3E74CD8E18A43CB72CFE332E4033FDB100818CDB71306806223191473BF2C86E24452BC9B20"
+          },
+          {
+            "RelativePath": "trainConfig.json",
+            "Hash": "626CB7B4FA57D9EA0CEBF933681E4D6BC6C9C41B6BEF49B74DF15E7402E5B883B8E4455F449BB2BDD63A7FE1E4E03D88B02C274F85E5C792075CBA89822A26E4"
+          },
+          {
+            "RelativePath": "trainRun_1_config.json",
+            "Hash": "020D12499CA911FBA75D8CB0FA64266348E128AF7B4F30B8495A7E49D481B5D39DF306783250CD2EA9EB80769C7A17462715E30BCD5D59D2461AC04E57928197"
+          }
+        ],
+        "Outputs": [
+          {
+            "RelativePath": "run1/",
+            "Hash": "293C2F80B767E4B6DA3F3F1CDB364BF38E235128F3ECE2C9F4A17638EFA18A0D1D409B05905D23EEC4C5C73317B15C1222C4C54369749251932725D1530A6B02"
+          }
+        ],
+        "ResourceGroups": [
+          "gpu"
+        ],
+        "SuccessfulExitCodes": [
+          0
+        ],
+        "OutputIndex": 0,
+        "WorkingDirectory": "../../..",
+        "Command": "python $in1 $in2 $in3 $out1",
+        "Signature": "2EA2B067811E8D7E36D9161086884E740402EE1D",
+        "OutputsCleanDisabled": false
+      }
+    ]
+  },
+  "IsTracked": false
+}
