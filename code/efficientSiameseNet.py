@@ -65,7 +65,7 @@ class TripletCosineDistanceLossLayer(tf.keras.layers.Layer):
         posSim = tf.keras.losses.cosine_similarity(anchorFeatures, positiveFeatures, axis=-1) # -1.0 is perferct alignment
         negSim = tf.keras.losses.cosine_similarity(anchorFeatures, negativeFeatures, axis=-1)
         #print("posSim shape {0}".format(posSim.shape))
-        loss = tf.reduce_mean(tf.maximum(self.optimizationMargin + posSim - negSim, 0))
+        loss = tf.reduce_mean(self.optimizationMargin + posSim - tf.minimum(negSim, 0))
 
         self.add_loss(loss)
         return (anchorFeatures, positiveFeatures, negativeFeatures)

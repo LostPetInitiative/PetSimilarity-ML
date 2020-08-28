@@ -1,0 +1,9 @@
+{
+    "minImagesPerCardForSimilarity": 4,
+    "monitoredMetric": "loss",
+    "monitoredMode": "min",
+    "reduceLrPatience": 3,
+    "minAllowedLR": 1e-6,
+    "earlyStoppingPatience": 7,
+    "minMetricDelta": 1e-2
+}
