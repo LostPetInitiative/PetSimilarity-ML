@@ -3,4 +3,6 @@ venv
 **/*.hash
 .alpheus/storage
 data/detectedPetsSummary.csv
+experiments/dgrechka/3/run3/
+experiments/dgrechka/4/run3/
 // ---alpheus-managed-end---

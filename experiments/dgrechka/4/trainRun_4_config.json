@@ -1,0 +1,13 @@
+{
+    "minImagesPerCardForSimilarity": 2,
+    "monitoredMetric": "val_pos_cossim",
+    "monitoredMode": "max",
+    "reduceLrPatience": 3,
+    "minAllowedLR": 1e-7,
+    "earlyStoppingPatience": 7,
+    "minMetricDelta": 1e-3,
+    "checkpointBackboneFrozen": true,
+    "freezeBackbone": false,
+    "batchSize": 2,
+    "simImageSplit": "uniformRandom"
+}

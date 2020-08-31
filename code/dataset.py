@@ -41,14 +41,15 @@ class SimilaritySet:
         isFirstIter = True
         while cycled or isFirstIter:
             for similarityPetId in self.similarityPets:
-                simImages = self.petToImages[similarityPetId]
+                simImages = list(self.petToImages[similarityPetId])
+                self.r.shuffle(simImages)
                 simImagesCount = len(simImages)
                 if simImagesSplit == "equal":
-                    rightPartStartIdx = simImagesCount // 2
-                    simPart1 = simImages[0:rightPartStartIdx]
-                    simPart2 = simImages[rightPartStartIdx:]
+                    rightPartStartIdx = simImagesCount // 2                    
                 else:
-                    raise "not implemented"
+                    rightPartStartIdx = math.floor(self.r.random()*(simImagesCount-1) + 1)                    
+                simPart1 = simImages[0:rightPartStartIdx]
+                simPart2 = simImages[rightPartStartIdx:]
 
                 alternativeFound = False
                 while not alternativeFound:                    

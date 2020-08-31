@@ -17,6 +17,10 @@ import multiprocessing
 trainConfigPath = sys.argv[1]
 trainRunConfigPath = sys.argv[2]
 outputPath = sys.argv[3]
+if len(sys.argv) > 4:
+    checkpointPath = os.path.join(sys.argv[4],"weights.hdf5")
+else:
+    checkpointPath = "nonexistant"
 
 with open(trainConfigPath, 'r') as json_file:
     trainConfig = json.load(json_file)
@@ -42,14 +46,16 @@ minAllowedLR = trainRunConfig["minAllowedLR"]
 earlyStoppingPatience = trainRunConfig["earlyStoppingPatience"]
 minMetricDelta = trainRunConfig["minMetricDelta"]
 
+checkpointBackboneFrozen = bool(trainRunConfig["checkpointBackboneFrozen"])
+freezeBackbone = bool(trainRunConfig["freezeBackbone"])
+
 seed = 344567
 imageSize = 224
 seqLength = 8
 l2regAlpha = 0.0
 doRate = 0.0
-batchSize = 4
+batchSize = trainRunConfig["batchSize"]
 prefetchQueueLength = multiprocessing.cpu_count()
-freezeBackbone = True
 
 random.seed(seed)
 tf.random.set_seed(seed+667734)
@@ -179,7 +185,7 @@ def createDataset(sampleGen, shuffleBufferSize=0):
     dummySupervisedDataset = tf.data.Dataset.zip((processedDataset, zerosDs))
 
     dummySupervisedBatchedDataset = dummySupervisedDataset \
-        .batch(batchSize) \
+        .batch(batchSize, drop_remainder=True) \
         .prefetch(prefetchQueueLength)
     return dummySupervisedBatchedDataset
 
@@ -188,6 +194,17 @@ valTfDs = createDataset(valGen, 0)
 
 model, backbone, featureExtractor = efficientSiameseNet.constructSiameseTripletModel(seqLength, l2regAlpha, doRate, imageSize)
 print("model constructed")
+
+if os.path.exists(checkpointPath):
+    if checkpointBackboneFrozen:
+        backbone.trainable = False
+    else:
+        backbone.trainable = True
+    print("Loading pretrained weights {0}".format(checkpointPath))
+    model.load_weights(checkpointPath, by_name=True)
+    print("Loaded pretrained weights {0}".format(checkpointPath))
+else:
+    print("Starting learning from scratch")
 
 if freezeBackbone:
     print("Backbone is FROZEN")
@@ -236,7 +253,7 @@ callbacks = [
 model.fit(x = trainTfDs, \
     steps_per_epoch= int(math.ceil(trSamplesInOneEpochs / batchSize)), \
     validation_data = valTfDs, \
-    validation_steps = int(math.ceil(vaSamplesInOneEpochs / batchSize)), \
+    validation_steps = int(math.floor(vaSamplesInOneEpochs / batchSize)), \
     verbose = 2,
     callbacks=callbacks,
     shuffle=False, # dataset is shuffled explicilty

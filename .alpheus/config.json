@@ -6,7 +6,13 @@
       "Fields": [
         ".alpheus/storage"
       ]
+    },
+    "nas": {
+      "Case": "Directory",
+      "Fields": [
+        "/mnt/ML/alpheus-storage/"
+      ]
     }
   },
-  "DefaultStorage": "local"
+  "DefaultStorage": "nas"
 }

@@ -1,0 +1,50 @@
+{
+  "FileFormatVersion": 1,
+  "Origin": {
+    "Case": "CommandOrigin",
+    "Fields": [
+      {
+        "Inputs": [
+          {
+            "RelativePath": "../../../code/train.py",
+            "Hash": "67555710FE4488271429531B83B8228917BF9183BADDB2DA925BA06DC921181BF9535858291C33296C1952EE26D1209418C45A94DB3E2E102D87A893C075371E"
+          },
+          {
+            "RelativePath": "trainConfig.json",
+            "Hash": "626CB7B4FA57D9EA0CEBF933681E4D6BC6C9C41B6BEF49B74DF15E7402E5B883B8E4455F449BB2BDD63A7FE1E4E03D88B02C274F85E5C792075CBA89822A26E4"
+          },
+          {
+            "RelativePath": "trainRun_2_config.json",
+            "Hash": "D614F15DE935FA2502CEFE4CA485B1375A67AED9A2E3A649A085812215079285CD9DA626BA400D3A3EC81921C8413361E1EF0042344577C7389EC79151E03D29"
+          },
+          {
+            "RelativePath": "../../../code/efficientSiameseNet.py",
+            "Hash": "CC4DB01A9CCE07718CCA15281FF9E5BBF7CE5961BC04C3BBC28C4C35A320C73157119C5E3373FC1FC7A06B9AD7E5D8F404CD4B5FE172E0FFACFA52AACFB6F213"
+          },
+          {
+            "RelativePath": "run1/",
+            "Hash": "FEA7DAC102DA96422AD9FBD242AB07C0DCC1EB715E968F968AEFA953367EBFAA4E54756F9F755CD234182F80392306A5B44DAD4C94DDB4590645DA36ED54DA46"
+          }
+        ],
+        "Outputs": [
+          {
+            "RelativePath": "run2/",
+            "Hash": "AFBF319028CEA22B9A28A8F55578373255E462FC70CE4A86EC64325C279D8F138D48A8C8860E2ADD76DFC1CF04408C122B761DEC254C619A105F948C871FB75B"
+          }
+        ],
+        "ResourceGroups": [
+          "gpu"
+        ],
+        "SuccessfulExitCodes": [
+          0
+        ],
+        "OutputIndex": 0,
+        "WorkingDirectory": "../../..",
+        "Command": "python $in1 $in2 $in3 $out1 $in5",
+        "Signature": "D9506CC2612B9026395215A20B9615A619054AC6",
+        "OutputsCleanDisabled": false
+      }
+    ]
+  },
+  "IsTracked": false
+}
