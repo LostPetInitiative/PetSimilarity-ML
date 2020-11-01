@@ -39,8 +39,8 @@ def constructFeatureExtractor(backboneModel, seriesLen, l2regAlpha, DORate, seed
             recurrent_regularizer=tf.keras.regularizers.L1L2(l2=l2regAlpha),            
             return_sequences=False)(fc1DoOut)
     result = tf.keras.Model(name="FeatureExtractor", inputs=netInput, outputs=rnnOut)
-    print("Feature extractor")
-    print(result.summary())
+    #print("Feature extractor")
+    #print(result.summary())
     return result
 
 class TripletCosineSimilarityMetricLayer(tf.keras.layers.Layer):
