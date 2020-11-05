@@ -15,7 +15,7 @@ inputQueueName = os.environ['INPUT_QUEUE']
 outputQueueName = os.environ['OUTPUT_QUEUE']
 petType = os.environ["PET_TYPE"]
 
-appName = "FeatureVectorExtractor-experiments-3-4"
+appName = "FeatureVectorExtractor-experiments-3-4-{0}".format(petType)
 
 seqLength = 8
 l2regAlpha=0.0
@@ -102,28 +102,36 @@ async def work():
             #print("Got job {0}".format(job))
             uid = job["UID"]
             log("{0}: Starting to process the job".format(uid))
-            images = job['images']
-            log("{0}: Extracting {1} images".format(uid, len(images)))
-            
-            imagesNp = kafkaJobQueue.imagesFieldToNp(images)
+            if job["pet"] == petType:
+                images = job['images']
+                log("{0}: Extracting {1} images".format(uid, len(images)))
+                
+                imagesNp = kafkaJobQueue.imagesFieldToNp(images)
 
-            log("{0}: Extracted {1} images".format(uid, len(imagesNp)))
+                log("{0}: Extracted {1} images".format(uid, len(imagesNp)))
 
-            if featureExtractor is None:
-                print("(Re)constructing model")
-                model, backbone, featureExtractor = efficientSiameseNet.constructSiameseTripletModel(seqLength, l2regAlpha, doRate, imageSize)
-                backbone.trainable = False
-                model = None
-                backbone = None
-                print("Loading model weights {0}".format(modelWeightsFile))
-                featureExtractor.load_weights(modelWeightsFile)
+                if featureExtractor is None:
+                    print("(Re)constructing model")
+                    model, backbone, featureExtractor = efficientSiameseNet.constructSiameseTripletModel(seqLength, l2regAlpha, doRate, imageSize)
+                    backbone.trainable = False
+                    model = None
+                    backbone = None
+                    print("Loading model weights {0}".format(modelWeightsFile))
+                    featureExtractor.load_weights(modelWeightsFile)
 
-            resizedPack = loadImagePackNp(imagesNp)
-            log("{0}: images are resized and packed".format(uid))
-            inputData = tf.reshape(augment(coerceSeqSizeTF(resizedPack, seqLength)),[1,seqLength, imageSize,imageSize,3])
-            featureVector = featureExtractor.predict(inputData)
-            log("{0}: Got feature vector {1}".format(uid, featureVector))
-
+                resizedPack = loadImagePackNp(imagesNp)
+                log("{0}: images are resized and packed".format(uid))
+                inputData = tf.reshape(augment(coerceSeqSizeTF(resizedPack, seqLength)),[1,seqLength, imageSize,imageSize,3])
+                featureVector = featureExtractor.predict(inputData)
+                log("{0}: Got feature vector {1}".format(uid, featureVector))
+                job["exp_3_4_features"] = kafkaJobQueue.npArrayToBase64str(featureVector)
+                
+                await resultQueue.Enqueue(uid, job)
+                log("{0}: Posted result in output queue".format(uid))
+            else:
+                log("{0}: Skipping as pet type {1} is not for current model {2}".format(uid, job["pet"], petType))
+            worker.Commit()
+            log("{0}: Commited".format(uid))
             
 
 

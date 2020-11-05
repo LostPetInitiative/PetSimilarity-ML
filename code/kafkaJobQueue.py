@@ -73,6 +73,9 @@ def imagesFieldToNp(images):
     finally:
         shutil.rmtree(tempDir)
                 
+def npArrayToBase64str(npArray):
+    npArrayBytes = npArray.tobytes()
+    return base64.encodebytes(npArrayBytes).decode("utf-8").replace("\n","")
 
 
 class JobQueue:
