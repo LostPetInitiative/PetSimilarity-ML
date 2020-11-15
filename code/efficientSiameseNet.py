@@ -2,8 +2,8 @@ import tensorflow as tf
 
 def constructCnnBackbone(imageSize = 224):
     netInput = tf.keras.Input(shape=(imageSize, imageSize, 3), name="backboneInput")
-    backbone = tf.keras.applications.EfficientNetB0(        
-        weights='imagenet',
+    backbone = tf.keras.applications.EfficientNetB0(       
+        weights=None, #'imagenet',
         include_top=False,
         input_shape=(imageSize, imageSize, 3),
         # it should have exactly 3 inputs channels,
