@@ -134,7 +134,7 @@ def work():
             elif len(images) == 0:
                 log("{0}: Skipping as the card contains 0 images".format(uid))
             else:
-                log("{0}: Skipping as pet type {1} is not for current model {2}".format(uid, job["animal"], petType))
+                log("{0}: Skipping as pet type {1} is not for current model {2}".format(uid, job["animal"], animalType))
             worker.Commit()
             log("{0}: Commited".format(uid))
     
