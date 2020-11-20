@@ -8,16 +8,15 @@ import cv2
 
 import numpy as np
 import os
-import asyncio
 
 import gc
 
 kafkaUrl = os.environ['KAFKA_URL']
 inputQueueName = os.environ['INPUT_QUEUE']
 outputQueueName = os.environ['OUTPUT_QUEUE']
-petType = os.environ["PET_TYPE"]
+animalType = os.environ["ANIMAL_TYPE"]
 
-appName = "FeatureVectorExtractor-experiments-3-4-{0}".format(petType)
+appName = "FeatureVectorExtractor-experiments-3-4-{0}".format(animalType)
 
 seqLength = 8
 l2regAlpha=0.0
@@ -27,12 +26,12 @@ imageSize=224
 worker = kafkaJobQueue.JobQueueWorker(appName, kafkaBootstrapUrl=kafkaUrl, topicName=inputQueueName, appName=appName)
 resultQueue = kafkaJobQueue.JobQueueProducer(kafkaUrl, outputQueueName, appName)
 
-if petType == "cat":
+if animalType == "cat":
     modelWeightsFile = "featureExtractor_3_3.hdf5"
-elif petType == "dog":
+elif animalType == "dog":
     modelWeightsFile = "featureExtractor_4_3.hdf5"
 else:
-    raise "Unsupported pet type: {0}".format(petType)
+    raise "Unsupported pet type: {0}".format(animalType)
 
 def log(message):
     print(message)
@@ -87,25 +86,27 @@ def loadImagePackNp(imagesNp):
     return np.reshape(np.stack([cv2.resize(coerceDimntionality(x), (imageSize, imageSize)) for x in imagesNp], axis=0),(len(imagesNp),imageSize,imageSize,3))
 
 
-async def work():
+def work():
     log("Service started. Pooling for a job")
     featureExtractor = None
     while True:        
         job = worker.TryGetNextJob(5000)
         if job is None:
-            if not(featureExtractor is None):
-                # unloading the model to free the memory
-                model, backbone, featureExtractor = None, None, None
-                tf.keras.backend.clear_session()
-                gc.collect()
-                log("Model unloaded to free the memory")
+            # unloading model does not free the memory. Thus we do not unload for now
+
+            # if not(featureExtractor is None):
+            #     # unloading the model to free the memory
+            #     model, backbone, featureExtractor = None, None, None
+            #     tf.keras.backend.clear_session()
+            #     gc.collect()
+            #     log("Model unloaded to free the memory")
             continue
         else:
             #print("Got job {0}".format(job))
-            uid = job["UID"]
+            uid = job["uid"]
             log("{0}: Starting to process the job".format(uid))
-            images = job['images']
-            if (job["pet"] == petType) and len(images)>0:
+            images = job['detected_pet_images']
+            if (job["animal"] == animalType) and len(images)>0:
                 log("{0}: Extracting {1} images".format(uid, len(images)))
                 
                 imagesNp = imageSerialization.imagesFieldToNp(images)
@@ -128,19 +129,19 @@ async def work():
                 log("{0}: Got feature vector {1}".format(uid, featureVector))
                 job["exp_3_4_features"] = npSerialization.npArrayToBase64str(featureVector)
                 
-                await resultQueue.Enqueue(uid, job)
+                resultQueue.EnqueueSync(uid, job)
                 log("{0}: Posted result in output queue".format(uid))
             elif len(images) == 0:
                 log("{0}: Skipping as the card contains 0 images".format(uid))
             else:
-                log("{0}: Skipping as pet type {1} is not for current model {2}".format(uid, job["pet"], petType))
+                log("{0}: Skipping as pet type {1} is not for current model {2}".format(uid, job["animal"], petType))
             worker.Commit()
             log("{0}: Commited".format(uid))
     
 
 if __name__ == '__main__':
     try:
-        asyncio.run(work())
+        work()
     except SystemExit:
         pass
 
