@@ -1,7 +1,5 @@
 import tensorflow as tf
-import kafkaJobQueue
-import imageSerialization
-import npSerialization
+import kafkajobs
 import efficientSiameseNet
 from skimage import io
 import cv2
@@ -23,8 +21,8 @@ l2regAlpha=0.0
 doRate=0.0
 imageSize=224
 
-worker = kafkaJobQueue.JobQueueWorker(appName, kafkaBootstrapUrl=kafkaUrl, topicName=inputQueueName, appName=appName)
-resultQueue = kafkaJobQueue.JobQueueProducer(kafkaUrl, outputQueueName, appName)
+worker = kafkajobs.jobqueue.JobQueueWorker(appName, kafkaBootstrapUrl=kafkaUrl, topicName=inputQueueName, appName=appName)
+resultQueue = kafkajobs.jobqueue.JobQueueProducer(kafkaUrl, outputQueueName, appName)
 
 if animalType == "cat":
     modelWeightsFile = "featureExtractor_3_3.hdf5"
@@ -109,7 +107,7 @@ def work():
             if (job["animal"] == animalType) and len(images)>0:
                 log("{0}: Extracting {1} images".format(uid, len(images)))
                 
-                imagesNp = imageSerialization.imagesFieldToNp(images)
+                imagesNp = kafkajobs.serialization.imagesFieldToNp(images)
 
                 log("{0}: Extracted {1} images".format(uid, len(imagesNp)))
 
@@ -127,9 +125,9 @@ def work():
                 inputData = tf.reshape(augment(coerceSeqSizeTF(resizedPack, seqLength)),[1,seqLength, imageSize,imageSize,3])
                 featureVector = featureExtractor.predict(inputData)
                 log("{0}: Got feature vector {1}".format(uid, featureVector))
-                job["exp_3_4_features"] = npSerialization.npArrayToBase64str(featureVector)
+                job["exp_3_4_features"] = kafkajobs.serialization.npArrayToBase64str(featureVector)
                 
-                resultQueue.EnqueueSync(uid, job)
+                resultQueue.Enqueue(uid, job)
                 log("{0}: Posted result in output queue".format(uid))
             elif len(images) == 0:
                 log("{0}: Skipping as the card contains 0 images".format(uid))
