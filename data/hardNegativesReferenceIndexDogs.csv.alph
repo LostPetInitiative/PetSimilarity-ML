@@ -1,0 +1,36 @@
+{
+  "FileFormatVersion": 1,
+  "Origin": {
+    "Case": "CommandOrigin",
+    "Fields": [
+      {
+        "Inputs": [
+          {
+            "RelativePath": "imagesSummary.csv",
+            "Hash": "6529143C229AB93006891E8D242887533FAE257C43EEA960CE98D434DC704029539A739F7F3C0D6BCA432D4AA29E3E56F567B48306691F678C1D413603DD20E1"
+          },
+          {
+            "RelativePath": "../code/buildHardNegativeImagesReferenceIndex.py",
+            "Hash": "B2ABE1ABDE36E46C719CB7B7E2FB9E24BAB058966B1D364A64267D37F965D59987DFB581C036738751EC19EC43A8ACA5A033ACBB555E0B18239B6F54BFC53398"
+          }
+        ],
+        "Outputs": [
+          {
+            "RelativePath": "hardNegativesReferenceIndexDogs.csv",
+            "Hash": "A2084AD1C1990C8097F8659616821B9204D2F209B82B9CA003EFC69DBFB946AB4DBE5FF1E81BC9FA3741AE351A5FD896ACEC7F6998B61221B7C98380F90CE2A5"
+          }
+        ],
+        "ResourceGroups": [],
+        "SuccessfulExitCodes": [
+          0
+        ],
+        "OutputIndex": 0,
+        "WorkingDirectory": ".",
+        "Command": "python $in2 $in1 dog $out1",
+        "Signature": "919C3C80E448E46C5AEFE05252B2E8E6B285902A",
+        "OutputsCleanDisabled": false
+      }
+    ]
+  },
+  "IsTracked": false
+}
