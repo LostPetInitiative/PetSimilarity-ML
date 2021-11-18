@@ -77,10 +77,10 @@ featureDims = ",".join(f"features_{featuresIdent}_{d}_d" for d in range(0,80))
 def constructQuery(ident):
     with urllib.request.urlopen(f"{storagePrefixURL}{ident}") as conn:
         data = json.loads(conn.read().decode())
-        anchorLat = data["location"]["lat"]
-        anchorLon = data["location"]["lon"]
+        anchorLat = round(float(data["location"]["lat"]),2)
+        anchorLon = round(float(data["location"]["lon"]),2)
         featuresTargetVal = ','.join(str(round(x,3)) for x in data["features"][featuresIdent])
-    distFilterTerm = f"{{!bbox sfield=location pt={anchorLat},{anchorLon} d={radiusThreshold} cache=false}}"
+    distFilterTerm = f"{{!bbox sfield=location pt={anchorLat},{anchorLon} d={radiusThreshold}}}" # cache=false
     #query = f"top(n={maxReturnCount},having(select(search({collectionName},q=\"animal:{species} AND ({distFilterTerm})\",fl=\"id, {featureDims}\",sort=\"id asc\",qt=\"/export\"),id,cosineSimilarity(array({featureDims}), array({featuresTargetVal})) as similarity), gt(similarity, {similarityThreshold})),sort=\"similarity desc\")"    
     #query = f"having(select(search({collectionName},q=\"*:*\",fq=\"animal:{species}\",fq=\"NOT ({distFilterTerm})\",fl=\"id,{featureDims}\",sort=\"id asc\",qt=\"/export\"),id,cosineSimilarity(array({featureDims}), array({featuresTargetVal})) as similarity), gt(similarity, {similarityThreshold}))"    
     query = f"top(n={maxReturnCount},having(select(search({collectionName},q=\"*:*\",fq=\"animal:{species}\",fq=\"NOT ({distFilterTerm})\",fl=\"id,{featureDims}\",sort=\"id asc\",qt=\"/export\"),id,cosineSimilarity(array({featureDims}), array({featuresTargetVal})) as similarity), gt(similarity, {similarityThreshold})),sort=\"similarity desc\")"
@@ -138,7 +138,10 @@ async def work():
                     return (ident, None)
                 else:
                     return (ident, samples)
-        except:
+        except Exception as error:
+            print(error)
+            sys.stderr.flush()
+            sys.stdout.flush()
             exit(6)
         finally:
             concurrentTasksSem.release()
