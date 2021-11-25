@@ -58,10 +58,10 @@ with open(cardIdIndexTablePath, 'r') as indexFile:
         if not line:
             break
         indexMap[counter] = line
+        counter += 1
         if(line in alreadyProcessed):
             continue
         identsToProcess.append(line)
-        counter += 1
 
 print("Loaded card index of {0} cards".format(len(indexMap)))
 
