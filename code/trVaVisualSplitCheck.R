@@ -1,4 +1,5 @@
 inputFile <- 'data/rawCardsSummary.csv'
+outputFile <- 'data/testTrainPet911CardsSplit.csv'
 testProb <- 0.2
 
 set.seed(3456)
@@ -9,14 +10,16 @@ inputDf <- read.csv(inputFile, colClasses = list(
   sex='factor'
   ))
 
-inputDf[inputDf$photoCount > 4,]$photoCount <- ">= 5"
-inputDf$photoCount <- as.factor(inputDf$photoCount)
-
 testIndicator <- as.logical(rbinom(nrow(inputDf),1, testProb))
-
 inputDf$dataset <- 'train'
 inputDf[testIndicator,]$dataset <- 'test'
 inputDf$dataset <- as.factor(inputDf$dataset)
+
+write.csv(inputDf, file=outputFile, row.names = F)
+
+inputDf[inputDf$photoCount > 4,]$photoCount <- ">= 5"
+inputDf$photoCount <- as.factor(inputDf$photoCount)
+
 
 require(ggplot2)
 

@@ -44,7 +44,7 @@ monitoredMode = trainRunConfig["monitoredMode"]
 reduceLrPatience = trainRunConfig["reduceLrPatience"]
 minAllowedLR = trainRunConfig["minAllowedLR"]
 earlyStoppingPatience = trainRunConfig["earlyStoppingPatience"]
-minMetricDelta = trainRunConfig["minMetricDelta"]
+minMetricDelta = trainRunConfig["minMetricDelta"]    
 
 checkpointBackboneFrozen = bool(trainRunConfig["checkpointBackboneFrozen"])
 freezeBackbone = bool(trainRunConfig["freezeBackbone"])
@@ -61,7 +61,20 @@ random.seed(seed)
 tf.random.set_seed(seed+667734)
 
 catalog = pd.read_csv(catalogPath)
-print("{0} images are available".format(len(catalog)))
+print("{0} images are available in catalog".format(len(catalog)))
+
+if "testSplitDfPath" in trainConfig:
+    testSplitDf = pd.read_csv(trainConfig["testSplitDfPath"])
+    trainCardIds = testSplitDf.loc[testSplitDf.loc[:,'dataset'] == "train",:] # train only
+    trainIds = [int(x[2:]) for x in trainCardIds.loc[:,"cardId"].values] # stripping rl/rf prefix
+    print(f'{len(trainIds)} cards are suitable for tr/val out of {len(testSplitDf)}')
+    print(f'preview {trainIds[0:10]}')
+    print(catalog.head())
+    catalog = catalog[catalog['petId'].isin(trainIds)]
+    print(f'{len(catalog)} images are available after excluding test images')
+    if len(catalog) == 0:
+        exit(1)
+
 
 petSpecificCatalog = catalog.loc[catalog.loc[:,'pet'] == petType,:]
 print("{0} images of {1} pet type".format(len(petSpecificCatalog),petType))
