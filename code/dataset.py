@@ -5,12 +5,13 @@ import math
 import os
 
 class SimilaritySet:
-    def __init__(self, catalogDf,imagesBaseDir, randomSeed, minImagesPerCardForSimilarity=2, dataBinsCount = 100, ):    
+    def __init__(self, catalogDf,imagesBaseDir, randomSeed, minImagesPerCardForSimilarity=2, dataBinsCount = 100, hardNegativesMap=None):    
     
         uniquePets = set()
         self.petToImages = dict()
         self.r = random.Random(randomSeed)
         self.r_state = self.r.getstate()
+        self.hardNegativesMap = hardNegativesMap
         
         for row in catalogDf.itertuples():
             petId = int(row.petId)
@@ -29,7 +30,7 @@ class SimilaritySet:
         for petId in self.allPets:
             if len(self.petToImages[petId]) >= minImagesPerCardForSimilarity:
                 self.similarityPets.append(petId)
-        print("Dataset constructed: {0} pets, {1} of which can be used for similarity analysis".format(len(self.allPets), len(self.similarityPets)))
+        print("Dataset constructed: {0} pets, {1} of which can be used for positive samples splits".format(len(self.allPets), len(self.similarityPets)))
 
     def getSimilarityPetsCount(self):
         return len(self.similarityPets)
@@ -52,11 +53,29 @@ class SimilaritySet:
                 simPart2 = simImages[rightPartStartIdx:]
 
                 alternativeFound = False
-                while not alternativeFound:                    
-                    altIdx = math.floor(self.r.random() * len(self.allPets))
-                    altPetId = self.allPets[altIdx]                    
+                noAlternativesExist = False
+                if not(self.hardNegativesMap is None):
+                    altPetIds = self.hardNegativesMap[similarityPetId]
+                while (not alternativeFound) & (not noAlternativesExist):
+                    if self.hardNegativesMap is None:
+                        altIdx = math.floor(self.r.random() * len(self.allPets))
+                        altPetId = self.allPets[altIdx]
+                    else:                        
+                        #print(f'anchor {similarityPetId}. hard samples {altPetIds}')
+                        if len(altPetIds) == 0:
+                            noAlternativesExist = True
+                            break
+                        idx = math.floor(self.r.random() * len(altPetIds))
+                        altPetId = altPetIds[idx]
+
+                        # this hard negative ID can have no photos
+                        if not(altPetId in self.petToImages):
+                            del altPetIds[idx]
+                            continue                        
                     if altPetId != similarityPetId:
                         alternativeFound = True
+                if noAlternativesExist:
+                    continue
                 altPart = self.petToImages[altPetId]
                 yield (
                     np.array(simPart1),

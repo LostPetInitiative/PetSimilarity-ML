@@ -1,3 +1,4 @@
+from numpy.lib.function_base import delete
 import tensorflow as tf
 import numpy as np
 import pandas as pd
@@ -68,13 +69,32 @@ if "testSplitDfPath" in trainConfig:
     trainCardIds = testSplitDf.loc[testSplitDf.loc[:,'dataset'] == "train",:] # train only
     trainIds = [int(x[2:]) for x in trainCardIds.loc[:,"cardId"].values] # stripping rl/rf prefix
     print(f'{len(trainIds)} cards are suitable for tr/val out of {len(testSplitDf)}')
-    print(f'preview {trainIds[0:10]}')
-    print(catalog.head())
+    #print(f'preview {trainIds[0:10]}')
+    #print(catalog.head())
     catalog = catalog[catalog['petId'].isin(trainIds)]
     print(f'{len(catalog)} images are available after excluding test images')
-    if len(catalog) == 0:
-        exit(1)
+    testSplitDf = None
+    trainCardIds = None
+    trainIds = None
+else:
+    print("testSplitDfPath is not specifed in trainConfig. using entire catalog as tr/val (no test samples exclusion)")
 
+if "hardAltSamplesPath" in trainRunConfig:
+    hardAltSamplesDf = pd.read_csv(trainRunConfig['hardAltSamplesPath'])
+    #ident,hardSamples (space separated)
+    hardAltMap = {}
+    for row in hardAltSamplesDf.itertuples():
+        hardAltMap[int(row.ident[2:])] = [int(x[2:]) for x in row.hardSamples.split()] # stripping rf/rl prefix
+    print(f'Loaded {len(hardAltMap)} hard negative cards')
+    catalog = catalog[catalog['petId'].isin(hardAltMap.keys())]
+    print(f'{len(catalog)} images are available after leaving only the cards with hard negatives cards available')
+else:
+    hardAltMap = None
+    print(f'Hard negative cards path is not specifed in the trainRunConfig')
+
+if len(catalog) == 0:
+    exit(1)
+    
 
 petSpecificCatalog = catalog.loc[catalog.loc[:,'pet'] == petType,:]
 print("{0} images of {1} pet type".format(len(petSpecificCatalog),petType))
@@ -86,11 +106,13 @@ print(isVal)
 trainCatalog = petSpecificCatalog.loc[~ (isVal),:]
 valCatalog = petSpecificCatalog.loc[isVal,:]
 
+
+
 print("Train DS")
-trainDs = ds.SimilaritySet(trainCatalog,extractedImagesPath, seed+4221, minImagesPerCardForSimilarity=minImagesPerCardForSimilarity)
+trainDs = ds.SimilaritySet(trainCatalog,extractedImagesPath, seed+4221, minImagesPerCardForSimilarity=minImagesPerCardForSimilarity, hardNegativesMap=hardAltMap)
 
 print("Val DS")
-valDs = ds.SimilaritySet(valCatalog,extractedImagesPath, seed+4322, minImagesPerCardForSimilarity=minImagesPerCardForSimilarity)
+valDs = ds.SimilaritySet(valCatalog,extractedImagesPath, seed+4322, minImagesPerCardForSimilarity=minImagesPerCardForSimilarity, hardNegativesMap=hardAltMap)
 
 trSamplesInOneEpochs = trainDs.getSimilarityPetsCount()
 vaSamplesInOneEpochs = valDs.getSimilarityPetsCount()

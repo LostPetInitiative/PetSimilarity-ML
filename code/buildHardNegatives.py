@@ -138,8 +138,13 @@ async def work():
                     return (ident, None)
                 else:
                     return (ident, samples)
+        # except urllib.error.HTTPError as e:
+        #     if e.code == 404:
+        #         return (ident,None)
+        #     else:
+        #         exit(7)
         except Exception as error:
-            print(error)
+            print(f'{ident}: {error}')
             sys.stderr.flush()
             sys.stdout.flush()
             exit(6)
