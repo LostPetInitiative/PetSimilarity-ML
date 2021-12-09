@@ -55,6 +55,7 @@ imageSize = 224
 seqLength = 8
 l2regAlpha = 0.0
 doRate = 0.0
+startLR = trainRunConfig["startLR"]
 batchSize = trainRunConfig["batchSize"]
 prefetchQueueLength = multiprocessing.cpu_count()
 
@@ -205,7 +206,7 @@ zerosDs = tf.data.Dataset.range(1).repeat()
 
 def createDataset(sampleGen, shuffleBufferSize=0):
     imagePathsDataset = tf.data.Dataset.from_generator(
-        trainGen,
+        sampleGen,
         (tf.string, tf.string, tf.string),
         (tf.TensorShape([None]), tf.TensorShape([None]), tf.TensorShape([None])))
 
@@ -250,7 +251,7 @@ else:
 
 model.compile(
           #optimizer=tf.keras.optimizers.SGD(momentum=.5,nesterov=True, clipnorm=1.),
-          optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-4, clipnorm=1.),
+          optimizer=tf.keras.optimizers.RMSprop(learning_rate=startLR, clipnorm=1.),
           #optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
           #loss=loss,
           #metrics=[QuadraticWeightedKappa(input_format='scalar'), tf.keras.metrics.MeanAbsoluteError(name="mae") ] # tf.keras.metrics.MeanAbsoluteError(name="mae")
