@@ -251,8 +251,8 @@ else:
 
 model.compile(
           #optimizer=tf.keras.optimizers.SGD(momentum=.5,nesterov=True, clipnorm=1.),
-          optimizer=tf.keras.optimizers.RMSprop(learning_rate=startLR, clipnorm=1.),
-          #optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+          #optimizer=tf.keras.optimizers.RMSprop(learning_rate=startLR, clipnorm=1.),
+          optimizer=tf.keras.optimizers.Adam(learning_rate=startLR),
           #loss=loss,
           #metrics=[QuadraticWeightedKappa(input_format='scalar'), tf.keras.metrics.MeanAbsoluteError(name="mae") ] # tf.keras.metrics.MeanAbsoluteError(name="mae")
           )
